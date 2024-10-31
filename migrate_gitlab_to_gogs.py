@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-import requests
-import json
-import subprocess
-import os
-
 import argparse
+import json
+import os
+import subprocess
+
+import requests
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--source_namespace', 
@@ -85,8 +85,9 @@ finished = False
 project_list = []
 while not finished:
     print('Getting page %s'%page_id)
-    res = s.get(gitlab_url + '/projects?private_token=%s&page=%s'%(gitlab_token,page_id))
+    res = s.get(gitlab_url + '/users/%s/projects?private_token=%s&page=%s'%(args.source_namespace,gitlab_token,page_id))
     assert res.status_code == 200, 'Error when retrieving the projects. The returned html is %s'%res.text
+    print('Got %s projects'%len(json.loads(res.text)))
     project_list += json.loads(res.text)
     if len(json.loads(res.text)) < 1:
         finished = True
@@ -106,7 +107,8 @@ if not args.no_confirm:
 
 for i in range(len(filtered_projects)):
     src_name = filtered_projects[i]['name']
-    src_url = filtered_projects[i]['ssh_url_to_repo']
+    src_id = filtered_projects[i]['id']
+    src_url = filtered_projects[i]['http_url_to_repo']
     src_description = filtered_projects[i]['description']
     dst_name = src_name.replace(' ','-')
 
@@ -134,7 +136,7 @@ for i in range(len(filtered_projects)):
     
     dst_info = json.loads(create_repo.text)
 
-    dst_url = dst_info['ssh_url']
+    dst_url = dst_info['clone_url']
     # Git pull and push
     subprocess.check_call(['git','clone','--bare',src_url])
     os.chdir(src_url.split('/')[-1])
@@ -148,6 +150,19 @@ for i in range(len(filtered_projects)):
 
     print('\n\nFinished migration. New project URL is %s'%dst_info['html_url'])
     print('Please open the URL and check if everything is fine.')
+
+    if not args.no_confirm:
+        print('Do you want to archive the project on Gitlab?')
+        archive_repo = s.post(gitlab_url + '/projects/%s/archive?private_token=%s'%(src_id,gitlab_token))
+        print(archive_repo.status_code)
+        if archive_repo.status_code != 201:
+            print('Could not archive repo %s because of %s'%(src_name,json.loads(archive_repo.text)['message']))
+            if 'yes' != input('Do you want to skip this repo and continue with the next? (please answer yes or no) '):
+                print('\nYou decided to cancel...')
+                exit(1)
+            continue
+        print('Archived repo %s'%src_name)
+
     if not args.no_confirm:
         input('Hit any key to continue!')
     
