@@ -1,4 +1,4 @@
-# Migration utility for moving from Gitlab to Gogs / Gitea
+# Migration utility for moving from Gitlab to Gogs / Gitea / Forgejo
 
 This tools provides an automated way to copy all repositories in a namespaces from Gitlab to Gogs / Gitea / Forgejo.
 
@@ -9,6 +9,10 @@ Organizations in Gogs are supported as well.
 
 - Archive repository on GitLab after migration.
 - use HTTPS rather than SSH. Must setup the credentials before first run.
+- GitHub migrate + delete
+- GitHub mirror script (can be run on cron)
+
+TODO: tidy scripts
 
 ## Usage
 
